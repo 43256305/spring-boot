@@ -49,8 +49,11 @@ import org.springframework.data.repository.Repository;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+//xjh-就是@Configuration封装了一层
 @SpringBootConfiguration
+//xjh-实现自动装配
 @EnableAutoConfiguration
+//xjh-spring-context中的注解，用于指定扫描范围，如果不指定，则默认当前类的同级以及下级目录。通常与@Configuration一起使用，将扫描到的组件加入container。相当于<context:component-scan>标签
 @ComponentScan(excludeFilters = { @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
 		@Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) })
 public @interface SpringBootApplication {

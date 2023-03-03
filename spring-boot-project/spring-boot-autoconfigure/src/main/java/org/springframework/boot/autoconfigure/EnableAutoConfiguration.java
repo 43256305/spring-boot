@@ -79,7 +79,10 @@ import org.springframework.core.io.support.SpringFactoriesLoader;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
+// 通过引入AutoConfigurationPackages.Registrar，注册当前启动类的根package,注册AutoConfigurationPackages的BeanDefinition
 @AutoConfigurationPackage
+//xjh-使用@Import引入了AutoConfigurationImportSelector类，此类实现了springboot自动配置，后续会通过此类将META-INF/spring.factories中的相关类加入容器。
+//@Import作用：spring-context注解，将与Application不是同级或者下级的类或者包加入container。可以引入多个@Configuration类，普通的bean，或者ImportSelector、ImportBeanDefinitionRegistrar类（后两者必须依赖于@Import注解一起使用，不能通过其他方法加入container中）。
 @Import(AutoConfigurationImportSelector.class)
 public @interface EnableAutoConfiguration {
 

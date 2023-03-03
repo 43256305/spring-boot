@@ -267,9 +267,13 @@ public class SpringApplication {
 	public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
 		this.resourceLoader = resourceLoader;
 		Assert.notNull(primarySources, "PrimarySources must not be null");
+		// xjh-把启动类存储起来
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+		// xjh-设置应用类型是NONE、SERVLET、REACTIVE
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
+		// 设置初始化器，最后会调用这些初始化器
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
+		//设置监听器
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
@@ -296,29 +300,43 @@ public class SpringApplication {
 	 * @return a running {@link ApplicationContext}
 	 */
 	public ConfigurableApplicationContext run(String... args) {
+		// xjh-记录开始时间
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
 		ConfigurableApplicationContext context = null;
 		Collection<SpringBootExceptionReporter> exceptionReporters = new ArrayList<>();
 		configureHeadlessProperty();
+		// xjh-加载META-INF/spring.factories文件中key为SpringApplicationRunListener的bean。其实只能加载到一个Listener：EventPublishingRunListener。
 		SpringApplicationRunListeners listeners = getRunListeners(args);
+		// 将加载的SpringApplicationRunListener全部开始监听，这一步EventPublishingRunListener主要是发布ApplicationStartingEvent事件
 		listeners.starting();
 		try {
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+			// 创建并准备Environment
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
+			// 通过环境变量spring.beaninfo.ignore设置需要ignore的bean
 			configureIgnoreBeanInfo(environment);
+			// 打印banner
 			Banner printedBanner = printBanner(environment);
+			// 根据不同的环境（NONE、Servlet等）创建context，Servlet对应AnnotationConfigServletWebServerApplicationContext
+			// 同时这里也会创建beanFactory，创建与GenericApplicationContext类的无参构造器
 			context = createApplicationContext();
+			// 加载META-INF/spring.factories文件中key为SpringBootExceptionReporter的bean
 			exceptionReporters = getSpringFactoriesInstances(SpringBootExceptionReporter.class,
 					new Class[] { ConfigurableApplicationContext.class }, context);
+			// 设置环境到context中，设置一些bean，如springBootBanner
 			prepareContext(context, environment, listeners, applicationArguments, printedBanner);
+			// 调用的是AbstractApplicationContext类的refresh方法
 			refreshContext(context);
+			// 扩展点
 			afterRefresh(context, applicationArguments);
 			stopWatch.stop();
 			if (this.logStartupInfo) {
 				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
 			}
+			// 发布事件
 			listeners.started(context);
+			// 调用系统中ApplicationRunner以及CommandLineRunner接口的实现类
 			callRunners(context, applicationArguments);
 		}
 		catch (Throwable ex) {
@@ -327,6 +345,7 @@ public class SpringApplication {
 		}
 
 		try {
+			// 发布事件
 			listeners.running(context);
 		}
 		catch (Throwable ex) {
@@ -339,10 +358,14 @@ public class SpringApplication {
 	private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
 			ApplicationArguments applicationArguments) {
 		// Create and configure the environment
+		// xjh-创建StandardEnvironment或StandardServletEnvironment类型的Environment
 		ConfigurableEnvironment environment = getOrCreateEnvironment();
+		// 配置Environment，主要是配置PropertySource、Profile与启动参数
 		configureEnvironment(environment, applicationArguments.getSourceArgs());
 		ConfigurationPropertySources.attach(environment);
+		// EventPublishingRunListener发布ApplicationEnvironmentPreparedEvent事件
 		listeners.environmentPrepared(environment);
+		// SpringApplication与environment绑定
 		bindToSpringApplication(environment);
 		if (!this.isCustomEnvironment) {
 			environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
@@ -365,18 +388,25 @@ public class SpringApplication {
 
 	private void prepareContext(ConfigurableApplicationContext context, ConfigurableEnvironment environment,
 			SpringApplicationRunListeners listeners, ApplicationArguments applicationArguments, Banner printedBanner) {
+		// xjh-context设置环境
 		context.setEnvironment(environment);
+		// 主要是设置ConversionService
 		postProcessApplicationContext(context);
+		// 调用META-INF/spring.factories文件中所有ApplicationContextInitializer.initialize()方法，如ContextIdApplicationContextInitializer用于设置context的id
 		applyInitializers(context);
+		// 发布ApplicationContextInitializedEvent事件
 		listeners.contextPrepared(context);
 		if (this.logStartupInfo) {
 			logStartupInfo(context.getParent() == null);
+			// 打印当前active的profile
 			logStartupProfileInfo(context);
 		}
 		// Add boot specific singleton beans
 		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
+		// 注册springApplicationArguments，为我们前面创建的DefaultApplicationArguments
 		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
 		if (printedBanner != null) {
+			// 注册springBootBanner
 			beanFactory.registerSingleton("springBootBanner", printedBanner);
 		}
 		if (beanFactory instanceof DefaultListableBeanFactory) {
@@ -390,6 +420,7 @@ public class SpringApplication {
 		Set<Object> sources = getAllSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
 		load(context, sources.toArray(new Object[0]));
+		// 发布context已加载事件
 		listeners.contextLoaded(context);
 	}
 
@@ -412,6 +443,7 @@ public class SpringApplication {
 
 	private SpringApplicationRunListeners getRunListeners(String[] args) {
 		Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
+		// xjh-加载META-INF/spring.factories文件中key为SpringApplicationRunListener的bean
 		return new SpringApplicationRunListeners(logger,
 				getSpringFactoriesInstances(SpringApplicationRunListener.class, types, this, args));
 	}
@@ -607,6 +639,7 @@ public class SpringApplication {
 			}
 		}
 		if (this.addConversionService) {
+			// xjh-设置ConversionService
 			context.getBeanFactory().setConversionService(ApplicationConversionService.getSharedInstance());
 		}
 	}
@@ -1223,6 +1256,7 @@ public class SpringApplication {
 	 * @return the running {@link ApplicationContext}
 	 */
 	public static ConfigurableApplicationContext run(Class<?>[] primarySources, String[] args) {
+		// xjh-primarySources就是启动类
 		return new SpringApplication(primarySources).run(args);
 	}
 
