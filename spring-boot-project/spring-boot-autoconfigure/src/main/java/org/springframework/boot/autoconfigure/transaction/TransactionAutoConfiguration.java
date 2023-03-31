@@ -49,12 +49,14 @@ import org.springframework.transaction.support.TransactionTemplate;
  * @since 1.3.0
  */
 @Configuration(proxyBeanMethods = false)
+// xjh-表示只有在类路径中存在PlatformTransactionManager类时，此TransactionAutoConfiguration才会加入容器
 @ConditionalOnClass(PlatformTransactionManager.class)
 @AutoConfigureAfter({ JtaAutoConfiguration.class, HibernateJpaAutoConfiguration.class,
 		DataSourceTransactionManagerAutoConfiguration.class, Neo4jDataAutoConfiguration.class })
 @EnableConfigurationProperties(TransactionProperties.class)
 public class TransactionAutoConfiguration {
 
+	// xjh-@ConditionalOnMissingBean作用：在BeanFactory中没有TransactionManagerCustomizers类型的bean存在时，则使用下面方法生成的bean
 	@Bean
 	@ConditionalOnMissingBean
 	public TransactionManagerCustomizers platformTransactionManagerCustomizers(
@@ -69,6 +71,7 @@ public class TransactionAutoConfiguration {
 		return TransactionalOperator.create(transactionManager);
 	}
 
+	// xjh-@ConditionalOnSingleCandidate(PlatformTransactionManager.class)表示只有在容器中已经存在唯一的PlatformTransactionManager类型的bean时满足要求
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnSingleCandidate(PlatformTransactionManager.class)
 	public static class TransactionTemplateConfiguration {
@@ -76,16 +79,22 @@ public class TransactionAutoConfiguration {
 		@Bean
 		@ConditionalOnMissingBean(TransactionOperations.class)
 		public TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
+			// xjh-创建一个TransactionTemplate
 			return new TransactionTemplate(transactionManager);
 		}
 
 	}
 
+	// xjh-当容器中不存在AbstractTransactionManagementConfiguration类型的bean时，创建一个EnableTransactionManagementConfiguration。
+	// 使用EnableTransactionManagementConfiguration即是使用springAop的jdk或者cglib代理。
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnBean(TransactionManager.class)
 	@ConditionalOnMissingBean(AbstractTransactionManagementConfiguration.class)
 	public static class EnableTransactionManagementConfiguration {
 
+		// xjh-注意下面的@EnableTransactionManagement注解，此注解通过@Import引入TransactionManagementConfigurationSelector类，此类引入了事务相关的增强器(SpringAop或者AspectJ)
+		// 详情查看Spring源码TransactionManagementConfigurationSelector
+		// 通过@ConditionalOnProperty注解，读取用户选择cglib还是jdk动态代理作为事务增强器，默认使用cglib。
 		@Configuration(proxyBeanMethods = false)
 		@EnableTransactionManagement(proxyTargetClass = false)
 		@ConditionalOnProperty(prefix = "spring.aop", name = "proxy-target-class", havingValue = "false",

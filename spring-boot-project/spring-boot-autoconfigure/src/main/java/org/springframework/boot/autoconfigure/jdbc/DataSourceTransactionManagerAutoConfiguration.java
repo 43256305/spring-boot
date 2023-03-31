@@ -49,6 +49,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 @EnableConfigurationProperties(DataSourceProperties.class)
 public class DataSourceTransactionManagerAutoConfiguration {
 
+	// xjh-注意，下面这个类的创建需要DataSource已经存在context中，所以当我们的项目没有配置连接数据库时，并不会创建此类
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnSingleCandidate(DataSource.class)
 	static class DataSourceTransactionManagerConfiguration {
@@ -57,6 +58,7 @@ public class DataSourceTransactionManagerAutoConfiguration {
 		@ConditionalOnMissingBean(PlatformTransactionManager.class)
 		DataSourceTransactionManager transactionManager(DataSource dataSource,
 				ObjectProvider<TransactionManagerCustomizers> transactionManagerCustomizers) {
+			// xjh-创建一个transactionManager
 			DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
 			transactionManagerCustomizers.ifAvailable((customizers) -> customizers.customize(transactionManager));
 			return transactionManager;

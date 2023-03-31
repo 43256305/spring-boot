@@ -1,1 +1,13 @@
-
+spring:
+  datasource:
+    name: mybatis
+    ip: 127.0.0.1
+    port: 3306
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      url: jdbc:mysql://${spring.datasource.ip}:${spring.datasource.port}/${spring.datasource.name}?useUnicode=true&characterEncoding=UTF-8&useSSL=false&autoReconnect=true&failOverReadOnly=false&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true
+      username: root
+      password: admin
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    filters:
+      stat,wall,log4j

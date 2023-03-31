@@ -40,6 +40,11 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
  * @author Josh Long
  * @since 1.0.0
  * @see EnableAspectJAutoProxy
+ *
+ * xjh-
+ *
+ * 当spring.aop.auto=false时，此类不会生效。
+ * proxyTargetClass默认为true，可以通过spring.aop.proxy-target-class=false设置为false
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(prefix = "spring.aop", name = "auto", havingValue = "true", matchIfMissing = true)
@@ -49,6 +54,9 @@ public class AopAutoConfiguration {
 	@ConditionalOnClass(Advice.class)
 	static class AspectJAutoProxyingConfiguration {
 
+		// xjh-注意这里的@EnableAspectJAutoProxy注解，此注解引入了AspectJAutoProxyRegistrar类，该类引入了事务相关的增强器：AnnotationAwareAspectJAutoProxyCreator
+		// 而AnnotationAwareAspectJAutoProxyCreator的优先级大于InfrastructureAdvisorAutoProxyCreator，所以只要引入了spring-boot-aop依赖，则自动会使用此增强器，
+		// 没有引入时默认使用InfrastructureAdvisorAutoProxyCreator。相比于Infrastructure，Annotation能处理AspectJ风格的注解。
 		@Configuration(proxyBeanMethods = false)
 		@EnableAspectJAutoProxy(proxyTargetClass = false)
 		@ConditionalOnProperty(prefix = "spring.aop", name = "proxy-target-class", havingValue = "false",
